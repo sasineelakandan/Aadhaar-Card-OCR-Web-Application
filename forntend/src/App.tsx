@@ -2,10 +2,31 @@ import { useState } from "react";
 import axios from "axios";
 import "./App.css";
 
+interface Address {
+  doorNo?: string;
+  street?: string;
+  village?: string;
+  taluk?: string;
+  district?: string;
+  state?: string;
+  pincode?: string;
+  postOffice?: string;
+  block?: string;
+}
+
+interface ExtractedData {
+  name?: string;
+  gender?: string;
+  dob?: string;
+  aadhaarNumber?: string;
+  address?: Address;
+}
+
 function App() {
   const [frontImage, setFrontImage] = useState<File | null>(null);
   const [backImage, setBackImage] = useState<File | null>(null);
-  const [extractedData, setExtractedData] = useState<{ name?: string; gender?: string; dob?: string; address?: string }>({});
+ 
+const [extractedData, setExtractedData] = useState<ExtractedData>({})
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +62,7 @@ function App() {
     formData.append("files", backImage)
 
       const response = await axios.post("http://localhost:8001/api/user/extractData", formData);
-
+     console.log(response.data)
       setExtractedData(response.data);
     } catch (error) {
       setError("An error occurred during OCR processing. Please try again.");
@@ -89,14 +110,28 @@ function App() {
       </button>
 
       {Object.keys(extractedData).length > 0 && !error && (
-        <div className="mt-6 bg-white p-6 shadow-lg rounded-lg w-full max-w-3xl">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Extracted Aadhaar Details</h2>
-          <p><strong>Name:</strong> {extractedData.name}</p>
-          <p><strong>Gender:</strong> {extractedData.gender}</p>
-          <p><strong>Date of Birth:</strong> {extractedData.dob}</p>
-          <p><strong>Address:</strong> {extractedData.address}</p>
-        </div>
-      )}
+  <div className="mt-6 bg-white p-6 shadow-lg rounded-lg w-full max-w-3xl">
+    <h2 className="text-2xl font-bold text-gray-800 mb-4">Extracted Aadhaar Details</h2>
+    <p><strong>Name:</strong> {extractedData.name}</p>
+    <p><strong>Athaar No:</strong>{extractedData.aadhaarNumber}</p>
+    <p><strong>Gender:</strong> {extractedData.gender}</p>
+    <p><strong>Date of Birth:</strong> {extractedData.dob}</p>
+
+    {extractedData.address && (
+      <div className="mt-4">
+        <h3 className="text-lg font-semibold text-gray-700">Address:</h3>
+        <p><strong>Door No:</strong> {extractedData.address.doorNo}</p>
+        <p><strong>Street:</strong> {extractedData.address.street}</p>
+        <p><strong>Village:</strong> {extractedData.address.village}</p>
+        <p><strong>Taluk:</strong> {extractedData.address.taluk}</p>
+        <p><strong>District:</strong> {extractedData.address.district}</p>
+       
+        <p><strong>Pincode:</strong> {extractedData.address.pincode}</p>
+      </div>
+    )}
+  </div>
+)}
+
     </div>
   );
 }

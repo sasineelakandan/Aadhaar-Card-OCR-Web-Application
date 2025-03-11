@@ -5,11 +5,11 @@ import Tesseract from "tesseract.js";
 import fs from "fs";
 
 export class UserController implements IUserController {
-  private userService: IUserService;
+  
 
-  constructor(userService: IUserService) {
-    this.userService = userService;
-  }
+  
+  
+  
 
   getextractdata = async (httpRequest: any): Promise<ControllerResponse> => {
     try {
@@ -19,54 +19,87 @@ export class UserController implements IUserController {
         throw new Error("Two images (front and back) are required.");
       }
 
-      const frontImagePath = httpRequest.files[0].path;
-      const backImagePath = httpRequest.files[1].path;
+      const [frontImage, backImage] = httpRequest.files;
+      console.log("Front Image Path:", frontImage.path);
+      console.log("Back Image Path:", backImage.path);
 
-      console.log("Front Image Path:", frontImagePath);
-      console.log("Back Image Path:", backImagePath);
-
-      // Extract text using Tesseract.js OCR
-      const frontText = await Tesseract.recognize(frontImagePath, "eng")
-        .then(({ data }) => data.text)
-        .catch((err) => {
-          console.error("Error processing front image:", err);
-          return "Error extracting text";
-        });
-
-      const backText = await Tesseract.recognize(backImagePath, "eng")
-        .then(({ data }) => data.text)
-        .catch((err) => {
-          console.error("Error processing back image:", err);
-          return "Error extracting text";
-        });
+      // Extract text from images using OCR
+      const frontText = await this.extractText(frontImage.path);
+      const backText = await this.extractText(backImage.path);
 
       console.log("Front Image Text:", frontText);
       console.log("Back Image Text:", backText);
 
-      // Store extracted text in the database (if required)
-      const extractedData = { frontText, backText };
-      const savedData = await this.userService.getextractdata(extractedData);
-
-      // Remove temporary uploaded files
-      fs.unlinkSync(frontImagePath);
-      fs.unlinkSync(backImagePath);
+      // Parse Aadhaar details
+      const extractedData = this.parseAadhaarData(frontText, backText);
+      
+      console.log('sasi',extractedData)
+      
 
       return {
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         statusCode: 201,
-        body: savedData,
+        body:extractedData,
       };
     } catch (error: any) {
       console.error("Error in getextractdata:", error.message);
       return {
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         statusCode: 500,
         body: { error: error.message || "An unknown error occurred." },
       };
     }
   };
+
+  private async extractText(imagePath: string): Promise<string> {
+    try {
+      const { data } = await Tesseract.recognize(imagePath, "eng");
+      return data.text;
+    } catch (err) {
+      console.error("Error extracting text from image:", err);
+      return "Error extracting text";
+    }
+  }
+
+  private parseAadhaarData(frontText: string, backText: string) {
+    const aadhaarRegex = /\b(\d{4}\s\d{4}\s\d{4})\b/;
+    const dobRegex = /DOB[:\s]+(\d{2}\/\d{2}\/\d{4})/;
+    const genderRegex = /\b(MALE|FEMALE|OTHER)\b/i;
+    const nameRegex = /^[A-Z][a-z]+(?:\s[A-Z][a-z]+)+/m;
+    const pincodeRegex = /\b\d{6}\b/;
+  
+    let aadhaarNumber = frontText.match(aadhaarRegex)?.[1] || backText.match(aadhaarRegex)?.[1] || "Not found";
+    const dob = frontText.match(dobRegex)?.[1] || "Not found";
+    const gender = frontText.match(genderRegex)?.[1] || "Not found";
+    const name = frontText.match(nameRegex)?.[0] || "Not found";
+  
+    // Extract address components from backText
+    const lines = backText.split("\n").map(line => line.trim()).filter(line => line);
+    let address = "Not found";
+    let structuredAddress: any = {};
+  
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].toLowerCase().includes("address")) {
+        address = lines.slice(i + 1).join(" ");
+        break;
+      }
+    }
+  
+    // Extract structured address details
+    const addressParts = address.split(",");
+    structuredAddress = {
+      doorNo: addressParts[1]?.trim() || "Not found",
+      street: addressParts[2]?.trim() || "Not found",
+      village: addressParts[3]?.trim() || "Not found",
+      taluk: addressParts[4]?.trim() || "Not found",
+      block: addressParts[5]?.trim() || "Not found",
+      postOffice: addressParts[6]?.trim() || "Not found",
+      district: addressParts[7]?.trim() || "Not found",
+      state: addressParts[8]?.trim() || "Not found",
+      pincode: backText.match(pincodeRegex)?.[0] || "Not found"
+    };
+  
+    return { aadhaarNumber, dob, gender, name, address: structuredAddress };
+  }
+  
 }
