@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+      "module": "NodeNext",  // Use NodeNext for ES Module support
+      "moduleResolution": "NodeNext",
+      "target": "ESNext",
+      "outDir": "./dist",
+      "rootDir": "./src",
+      "strict": true
+    }
+  }
+  
