@@ -1,8 +1,8 @@
 import { IUserController } from "../interface/controller/userController.interface";
 import { ControllerResponse } from "../interface/controller/userController.types";
-import { IUserService } from "../interface/services/userService.interface";
+
 import Tesseract from "tesseract.js";
-import fs from "fs";
+
 
 export class UserController implements IUserController {
   
@@ -11,7 +11,7 @@ export class UserController implements IUserController {
   
   
 
-  getextractdata = async (httpRequest: any): Promise<ControllerResponse> => {
+  getextractdata = async (httpRequest:any): Promise<ControllerResponse> => {
     try {
       console.log("Request received:", httpRequest);
 
@@ -23,14 +23,14 @@ export class UserController implements IUserController {
       console.log("Front Image Path:", frontImage.path);
       console.log("Back Image Path:", backImage.path);
 
-      // Extract text from images using OCR
+    
       const frontText = await this.extractText(frontImage.path);
       const backText = await this.extractText(backImage.path);
 
       console.log("Front Image Text:", frontText);
       console.log("Back Image Text:", backText);
 
-      // Parse Aadhaar details
+      
       const extractedData = this.parseAadhaarData(frontText, backText);
       
       console.log('sasi',extractedData)
@@ -73,7 +73,7 @@ export class UserController implements IUserController {
     const gender = frontText.match(genderRegex)?.[1] || "Not found";
     const name = frontText.match(nameRegex)?.[0] || "Not found";
   
-    // Extract address components from backText
+  
     const lines = backText.split("\n").map(line => line.trim()).filter(line => line);
     let address = "Not found";
     let structuredAddress: any = {};
@@ -85,20 +85,32 @@ export class UserController implements IUserController {
       }
     }
   
-    // Extract structured address details
+    
     const addressParts = address.split(",");
     structuredAddress = {
       doorNo: addressParts[1]?.trim() || "Not found",
-      street: addressParts[2]?.trim() || "Not found",
+      street: addressParts[2]?.trim()
+        .replace(/EE ed RS S/g, "")  
+        .replace(/\s+/g, " ")        
+        .trim() || "Not found",
       village: addressParts[3]?.trim() || "Not found",
       taluk: addressParts[4]?.trim() || "Not found",
       block: addressParts[5]?.trim() || "Not found",
       postOffice: addressParts[6]?.trim() || "Not found",
-      district: addressParts[7]?.trim() || "Not found",
+     district: addressParts[7]?.replace(/DIST:\s*/i, "").trim() || "Not found",
       state: addressParts[8]?.trim() || "Not found",
       pincode: backText.match(pincodeRegex)?.[0] || "Not found"
     };
+    const missingFields = [
+      aadhaarNumber, dob, gender, name, structuredAddress.doorNo, 
+      structuredAddress.street, structuredAddress.village, structuredAddress.pincode
+  ].filter(value => value === "Not found").length;
+
   
+  if (missingFields > 2) {
+    throw new Error("Upload a valid Aadhaar image");
+}
+
     return { aadhaarNumber, dob, gender, name, address: structuredAddress };
   }
   

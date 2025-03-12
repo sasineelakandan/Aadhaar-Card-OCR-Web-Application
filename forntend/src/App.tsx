@@ -1,6 +1,8 @@
 import { useState } from "react";
 import axios from "axios";
 import "./App.css";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface Address {
   doorNo?: string;
@@ -38,7 +40,7 @@ const [extractedData, setExtractedData] = useState<ExtractedData>({})
     if (!file) return;
 
     if (!allowedFormats.includes(file.type)) {
-      setError("Only JPEG, JPG, and PNG images are allowed.");
+      toast.error("Only JPEG, JPG, and PNG images are allowed.");
       return;
     }
 
@@ -49,7 +51,7 @@ const [extractedData, setExtractedData] = useState<ExtractedData>({})
   const processOCR = async () => {
     setError(null);
     if (!frontImage || !backImage) {
-      setError("Both Front and Back Aadhaar images are required.");
+      toast.error("Both Front and Back Aadhaar images are required.");
       return;
     }
 
@@ -62,10 +64,20 @@ const [extractedData, setExtractedData] = useState<ExtractedData>({})
     formData.append("files", backImage)
 
       const response = await axios.post("http://localhost:8001/api/user/extractData", formData);
-     console.log(response.data)
-      setExtractedData(response.data);
+     if(response.data){
+      toast.success('Success fully extracted')
+      setExtractedData(response.data)
+     }
+     
     } catch (error) {
-      setError("An error occurred during OCR processing. Please try again.");
+      if (axios.isAxiosError(error)) {
+        console.log(error);
+        const errorMessage = error.response?.data?.error || "An unexpected error occurred.";
+        console.log(errorMessage);
+        toast.error(errorMessage || "An error occurred during sign-up.");
+      } else {
+        console.log(error)
+      }
     } finally {
       setLoading(false);
     }
@@ -131,7 +143,7 @@ const [extractedData, setExtractedData] = useState<ExtractedData>({})
     )}
   </div>
 )}
-
+ <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 }
