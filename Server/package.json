@@ -24,6 +24,6 @@
   "scripts": {
     "dev": "nodemon",
     "build": "tsc",
-    "start": "nodemon src/index.ts"
+    "start": "nodemon src/index.js"
   }
 }
