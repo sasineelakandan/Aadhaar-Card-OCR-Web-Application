@@ -63,7 +63,7 @@ const [extractedData, setExtractedData] = useState<ExtractedData>({})
     formData.append("files", frontImage);
     formData.append("files", backImage)
 
-      const response = await axios.post("http://localhost:8001/api/user/extractData", formData);
+      const response = await axios.post(`${import.meta.env.VITE_USER_BACKEND_URL}/extractData`, formData);
      if(response.data){
       toast.success('Success fully extracted')
       setExtractedData(response.data)
